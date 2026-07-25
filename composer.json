@@ -1,0 +1,15 @@
+{
+    "name": "alfacode-team/hkm-plugin-database",
+    "description": "HKM Kernel plugin providing 'database.management'.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["hkm-kernel", "plugin", "php", "database.management"],
+    "require": {
+        "php": ">=8.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Plugins\\Database\\": ""
+        }
+    }
+}
