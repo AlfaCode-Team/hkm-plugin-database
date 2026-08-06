@@ -213,11 +213,32 @@ final class MultiDriverDatabaseAdapter implements DatabasePort
     /** Quote a table/column identifier for the active driver. */
     private function quoteId(string $identifier): string
     {
-        // Defensive: identifiers are first-party constants, never user input, but
-        // strip the quote chars so a stray one cannot break out of the quoting.
-        return $this->driver() === 'mysql'
-            ? '`' . str_replace('`', '', $identifier) . '`'
-            : '"' . str_replace('"', '', $identifier) . '"';
+        // ALLOW-LIST, not sanitise. Identifiers are interpolated into SQL — they
+        // cannot be bound as parameters — so the only safe rule is that they
+        // match a known-good shape. Stripping quote characters was not enough:
+        // it left every other character through, including whitespace, ';' and
+        // comment markers, and a column name also becomes a ':name' bind
+        // placeholder, which silently breaks on anything unusual.
+        //
+        // These are first-party constants today, so this is defence in depth
+        // against a future caller passing something derived from input.
+        // A single optional dot allows schema/database qualification.
+        if (preg_match('/^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)?$/', $identifier) !== 1) {
+            throw new \InvalidArgumentException(sprintf(
+                'Unsafe SQL identifier [%s]. Table and column names must match '
+                . '[A-Za-z0-9_] with at most one dot for qualification.',
+                $identifier,
+            ));
+        }
+
+        $quote = $this->driver() === 'mysql' ? '`' : '"';
+
+        // Quote each part separately so "schema.table" becomes `schema`.`table`
+        // rather than the invalid `schema.table`.
+        return implode('.', array_map(
+            static fn (string $part): string => $quote . $part . $quote,
+            explode('.', $identifier),
+        ));
     }
 
     /**
