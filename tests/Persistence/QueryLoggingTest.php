@@ -6,7 +6,7 @@ namespace Tests\Unit\Database\Persistence;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\AbstractLogger;
+use AlfacodeTeam\PhpServicePlatform\Kernel\Ports\LoggerPort;
 use Plugins\Database\Infrastructure\Drivers\SQLiteConfiguration;
 use Plugins\Database\Infrastructure\Persistence\MultiDriverDatabaseAdapter;
 
@@ -84,16 +84,30 @@ final class QueryLoggingTest extends TestCase
         $this->assertStringContainsString('Slow database query', array_values($warnings)[0]['message']);
     }
 
-    private function spyLogger(): AbstractLogger
+    /**
+     * The adapter takes the kernel's LoggerPort, not Psr\Log — the kernel
+     * defines its own logging contract so plugins are not coupled to a vendor
+     * interface. This spy therefore implements LoggerPort directly.
+     */
+    private function spyLogger(): LoggerPort
     {
-        return new class extends AbstractLogger {
-            /** @var list<array{level: mixed, message: string, context: array}> */
+        return new class implements LoggerPort {
+            /** @var list<array{level: string, message: string, context: array}> */
             public array $records = [];
 
-            public function log($level, \Stringable|string $message, array $context = []): void
+            public function emergency(string|\Stringable $m, array $c = []): void { $this->log('emergency', $m, $c); }
+            public function alert(string|\Stringable $m, array $c = []): void     { $this->log('alert', $m, $c); }
+            public function critical(string|\Stringable $m, array $c = []): void  { $this->log('critical', $m, $c); }
+            public function error(string|\Stringable $m, array $c = []): void     { $this->log('error', $m, $c); }
+            public function warning(string|\Stringable $m, array $c = []): void   { $this->log('warning', $m, $c); }
+            public function notice(string|\Stringable $m, array $c = []): void    { $this->log('notice', $m, $c); }
+            public function info(string|\Stringable $m, array $c = []): void      { $this->log('info', $m, $c); }
+            public function debug(string|\Stringable $m, array $c = []): void     { $this->log('debug', $m, $c); }
+
+            public function log(string $level, string|\Stringable $message, array $context = []): void
             {
                 $this->records[] = [
-                    'level' => (string) $level,
+                    'level'   => $level,
                     'message' => (string) $message,
                     'context' => $context,
                 ];
