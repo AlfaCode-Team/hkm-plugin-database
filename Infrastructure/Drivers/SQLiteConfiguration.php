@@ -13,9 +13,28 @@ use Plugins\Database\API\Contracts\DatabaseConfigurationContract;
  */
 final readonly class SQLiteConfiguration implements DatabaseConfigurationContract
 {
+    /**
+     * @param string   $path  ':memory:' or a file path
+     * @param int|null $flags PDO SQLite open flags. null = pdo_sqlite's own
+     *                        READWRITE|CREATE default, resolved lazily.
+     *
+     * NOTE: the flags default is deliberately null rather than a constant
+     * expression. It used to be `SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE`,
+     * which was wrong twice over:
+     *
+     *   1. SQLITE3_* comes from ext-sqlite3 (the procedural SQLite3 class),
+     *      while PDO::SQLITE_ATTR_OPEN_FLAGS expects pdo_sqlite's
+     *      PDO::SQLITE_OPEN_* family. The numeric values coincide, so it
+     *      "worked" — on hosts that happened to load an extension this driver
+     *      does not otherwise use.
+     *   2. A constant in a default parameter value is evaluated when the class
+     *      is loaded, so merely REFERENCING SQLiteConfiguration fataled with
+     *      "Undefined constant SQLITE3_OPEN_READWRITE" wherever ext-sqlite3 was
+     *      absent — including in tests that never open a connection.
+     */
     public function __construct(
-        private string $path = ':memory:',  // ':memory:' or file path
-        private int $flags = SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE,
+        private string $path = ':memory:',
+        private ?int $flags = null,
     ) {}
 
     public function driver(): string
@@ -40,12 +59,22 @@ final readonly class SQLiteConfiguration implements DatabaseConfigurationContrac
 
     public function pdoOptions(): array
     {
-        return [
+        $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::SQLITE_ATTR_OPEN_FLAGS => $this->flags,
         ];
+
+        // Both the attribute and the flag constants come from pdo_sqlite. Guard
+        // on them so this class stays loadable (and testable) without the
+        // extension; a connection would fail later anyway, with a clear PDO
+        // error naming the missing driver.
+        if (\defined('PDO::SQLITE_ATTR_OPEN_FLAGS')) {
+            $options[PDO::SQLITE_ATTR_OPEN_FLAGS] = $this->flags
+                ?? (PDO::SQLITE_OPEN_READWRITE | PDO::SQLITE_OPEN_CREATE);
+        }
+
+        return $options;
     }
 
     public function initStatements(): array
