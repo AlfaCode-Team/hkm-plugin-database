@@ -20,7 +20,9 @@ Provides `database.management`.
 
 ## Documentation
 
-See the [HKM Kernel guides](https://github.com/AlfaCode-Team/hkm-kernel/tree/main/docs/guides).
+- [CLAUDE.md](CLAUDE.md) — this plugin's contract, config and rules (start here).
+- Deep dive: [docs/DATABASE.md](docs/DATABASE.md)
+- [Kernel guides](https://github.com/AlfaCode-Team/hkm-kernel/tree/main/docs/guides) — the framework contracts this plugin builds on.
 
 ## License
 
