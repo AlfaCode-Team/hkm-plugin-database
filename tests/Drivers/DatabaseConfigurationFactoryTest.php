@@ -81,7 +81,7 @@ final class DatabaseConfigurationFactoryTest extends TestCase
             'ssl_ca' => '/ca.pem',
         ]);
 
-        $this->assertArrayHasKey(\PDO::MYSQL_ATTR_SSL_CA, $config->pdoOptions());
+        $this->assertArrayHasKey(\Pdo\Mysql::ATTR_SSL_CA, $config->pdoOptions());
     }
 
     public function test_sqlite_empty_database_becomes_memory(): void

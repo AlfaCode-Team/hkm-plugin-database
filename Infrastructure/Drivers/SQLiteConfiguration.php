@@ -23,8 +23,8 @@ final readonly class SQLiteConfiguration implements DatabaseConfigurationContrac
      * which was wrong twice over:
      *
      *   1. SQLITE3_* comes from ext-sqlite3 (the procedural SQLite3 class),
-     *      while PDO::SQLITE_ATTR_OPEN_FLAGS expects pdo_sqlite's
-     *      PDO::SQLITE_OPEN_* family. The numeric values coincide, so it
+     *      while \Pdo\Sqlite::ATTR_OPEN_FLAGS expects pdo_sqlite's
+     *      \Pdo\Sqlite::OPEN_* family. The numeric values coincide, so it
      *      "worked" — on hosts that happened to load an extension this driver
      *      does not otherwise use.
      *   2. A constant in a default parameter value is evaluated when the class
@@ -65,13 +65,15 @@ final readonly class SQLiteConfiguration implements DatabaseConfigurationContrac
             PDO::ATTR_EMULATE_PREPARES => false,
         ];
 
-        // Both the attribute and the flag constants come from pdo_sqlite. Guard
-        // on them so this class stays loadable (and testable) without the
+        // Both the attribute and the flag constants come from pdo_sqlite, and
+        // live on \Pdo\Sqlite (PHP 8.4+) — the PDO::SQLITE_* aliases are
+        // deprecated as of 8.5 and emit a notice on every connection. Guard on
+        // them so this class stays loadable (and testable) without the
         // extension; a connection would fail later anyway, with a clear PDO
         // error naming the missing driver.
-        if (\defined('PDO::SQLITE_ATTR_OPEN_FLAGS')) {
-            $options[PDO::SQLITE_ATTR_OPEN_FLAGS] = $this->flags
-                ?? (PDO::SQLITE_OPEN_READWRITE | PDO::SQLITE_OPEN_CREATE);
+        if (\defined('Pdo\Sqlite::ATTR_OPEN_FLAGS')) {
+            $options[\Pdo\Sqlite::ATTR_OPEN_FLAGS] = $this->flags
+                ?? (\Pdo\Sqlite::OPEN_READWRITE | \Pdo\Sqlite::OPEN_CREATE);
         }
 
         return $options;

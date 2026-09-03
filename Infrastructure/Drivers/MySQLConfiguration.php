@@ -59,12 +59,18 @@ final readonly class MySQLConfiguration implements DatabaseConfigurationContract
             // re-runs INIT_COMMAND on every connect AND auto-reconnect, so
             // CURRENT_TIMESTAMP/NOW() and TIMESTAMP read-back stay UTC even after
             // a dropped connection. '+00:00' is a numeric offset (no tz tables).
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$this->charset}, time_zone = '+00:00'",
+            //
+            // The driver-specific constants live on \Pdo\Mysql (PHP 8.4+), NOT on
+            // PDO: the PDO::MYSQL_* aliases are deprecated as of 8.5 and emit a
+            // notice on every connection. Written fully qualified because an
+            // unqualified `Pdo\Mysql` would resolve inside THIS namespace, and
+            // `use Pdo\Mysql;` would leave a bare `Mysql::` at the call site.
+            \Pdo\Mysql::ATTR_INIT_COMMAND => "SET NAMES {$this->charset}, time_zone = '+00:00'",
         ];
 
         if ($this->sslCa && $this->useSslVerify) {
-            $options[PDO::MYSQL_ATTR_SSL_CA] = $this->sslCa;
-            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+            $options[\Pdo\Mysql::ATTR_SSL_CA] = $this->sslCa;
+            $options[\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT] = true;
         }
 
         return $options;
@@ -72,7 +78,7 @@ final readonly class MySQLConfiguration implements DatabaseConfigurationContract
 
     public function initStatements(): array
     {
-        // Charset is already applied via MYSQL_ATTR_INIT_COMMAND; strict mode is
+        // Charset is already applied via \Pdo\Mysql::ATTR_INIT_COMMAND; strict mode is
         // enforced here so silent truncation/coercion never reaches production.
         // The session timezone is pinned to UTC ('+00:00' is a numeric offset, so
         // it needs no timezone tables): CURRENT_TIMESTAMP / NOW() and TIMESTAMP

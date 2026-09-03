@@ -66,11 +66,11 @@ final class MySQLConfigurationTest extends TestCase
     public function test_ssl_options_only_present_when_verify_enabled(): void
     {
         $without = (new MySQLConfiguration(sslCa: '/ca.pem', useSslVerify: false))->pdoOptions();
-        $this->assertArrayNotHasKey(PDO::MYSQL_ATTR_SSL_CA, $without);
+        $this->assertArrayNotHasKey(\Pdo\Mysql::ATTR_SSL_CA, $without);
 
         $with = (new MySQLConfiguration(useSslVerify: true, sslCa: '/ca.pem'))->pdoOptions();
-        $this->assertSame('/ca.pem', $with[PDO::MYSQL_ATTR_SSL_CA]);
-        $this->assertTrue($with[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT]);
+        $this->assertSame('/ca.pem', $with[\Pdo\Mysql::ATTR_SSL_CA]);
+        $this->assertTrue($with[\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT]);
     }
 
     public function test_init_statements_enforce_strict_mode(): void

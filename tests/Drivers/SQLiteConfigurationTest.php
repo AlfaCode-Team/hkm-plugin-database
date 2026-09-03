@@ -59,17 +59,17 @@ final class SQLiteConfigurationTest extends TestCase
         // driver only emits the entry when that extension is present. Asserting
         // it unconditionally would reintroduce the very hard dependency the
         // configuration was changed to avoid.
-        if (!\defined('PDO::SQLITE_ATTR_OPEN_FLAGS')) {
+        if (!\defined('Pdo\Sqlite::ATTR_OPEN_FLAGS')) {
             $this->assertSame(PDO::ERRMODE_EXCEPTION, $options[PDO::ATTR_ERRMODE]);
             $this->assertCount(3, $options, 'no sqlite-specific option without the extension');
 
             return;
         }
 
-        $this->assertArrayHasKey(PDO::SQLITE_ATTR_OPEN_FLAGS, $options);
+        $this->assertArrayHasKey(\Pdo\Sqlite::ATTR_OPEN_FLAGS, $options);
         $this->assertSame(
-            PDO::SQLITE_OPEN_READWRITE | PDO::SQLITE_OPEN_CREATE,
-            $options[PDO::SQLITE_ATTR_OPEN_FLAGS],
+            \Pdo\Sqlite::OPEN_READWRITE | \Pdo\Sqlite::OPEN_CREATE,
+            $options[\Pdo\Sqlite::ATTR_OPEN_FLAGS],
         );
         $this->assertSame(PDO::ERRMODE_EXCEPTION, $options[PDO::ATTR_ERRMODE]);
     }
