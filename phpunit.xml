@@ -4,6 +4,8 @@
          bootstrap="vendor/autoload.php"
          colors="true"
          failOnWarning="true"
+         failOnDeprecation="true"
+         failOnNotice="true"
          failOnRisky="true"
          cacheDirectory=".phpunit.cache">
     <testsuites>

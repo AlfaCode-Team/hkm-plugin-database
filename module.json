@@ -1,6 +1,6 @@
 {
   "name": "database",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "kernel": "^1.13.1",
   "solves": "database.management",
   "type": "module",
