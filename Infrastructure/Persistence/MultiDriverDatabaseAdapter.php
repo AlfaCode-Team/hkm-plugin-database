@@ -252,9 +252,44 @@ final class MultiDriverDatabaseAdapter implements DatabasePort
      * @return T
      * @throws ConnectionException
      */
+    /**
+     * Make a PHP `bool` bind the same way on every driver.
+     *
+     * PDO binds an unspecified parameter as a STRING, and a PHP `false`
+     * stringifies to `''`. SQLite's dynamic typing stores that happily in an
+     * INTEGER column; MySQL in strict mode refuses it outright:
+     *
+     *     SQLSTATE[22007]: Incorrect integer value: '' for column 'banned'
+     *
+     * So a bool in a parameter array is a defect that is INVISIBLE for as long
+     * as an application runs on SQLite and fatal the first time it does not —
+     * which is exactly the class of surprise this adapter exists to remove.
+     * Consumers had been normalising at their own repository boundaries, each
+     * having discovered it the same way.
+     *
+     * 1 / 0 is the portable form: an integer or boolean column takes it on
+     * MySQL, PostgreSQL ('1' and '0' are valid boolean input), SQLite and SQL
+     * Server alike. Nothing else is touched — null stays null, and a string
+     * that happens to look like a bool is the caller's own value.
+     *
+     * @param  array<array-key, mixed> $params
+     * @return array<array-key, mixed>
+     */
+    private static function normaliseBindings(array $params): array
+    {
+        foreach ($params as $key => $value) {
+            if (is_bool($value)) {
+                $params[$key] = $value ? 1 : 0;
+            }
+        }
+
+        return $params;
+    }
+
     private function run(string $operation, string $sql, array $params, callable $reader): mixed
     {
         $startedAt = microtime(true);
+        $params    = self::normaliseBindings($params);
 
         try {
             $stmt = $this->pdo()->prepare($sql);
