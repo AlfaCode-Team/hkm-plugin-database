@@ -73,12 +73,17 @@ final class MySQLConfigurationTest extends TestCase
         $this->assertTrue($with[\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT]);
     }
 
-    public function test_init_statements_enforce_strict_mode(): void
+    public function test_the_whole_session_setup_is_one_init_command(): void
     {
-        $statements = (new MySQLConfiguration())->initStatements();
+        $config = new MySQLConfiguration(charset: 'utf8mb4');
+        $init = $config->pdoOptions()[\Pdo\Mysql::ATTR_INIT_COMMAND];
 
-        $this->assertNotEmpty($statements);
-        $this->assertStringContainsString('STRICT_ALL_TABLES', $statements[0]);
+        // One statement, re-run by PDO on every reconnect: charset, UTC, strict.
+        $this->assertSame([], $config->initStatements(), 'no extra round trips per connection');
+        $this->assertStringStartsWith('SET NAMES utf8mb4', $init);
+        $this->assertStringContainsString("time_zone = '+00:00'", $init);
+        $this->assertStringContainsString('STRICT_ALL_TABLES', $init);
+        $this->assertStringNotContainsString(';', $init, 'one statement, not a batch');
     }
 
     public function test_to_array_never_exposes_password(): void

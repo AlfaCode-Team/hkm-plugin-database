@@ -55,17 +55,26 @@ final readonly class MySQLConfiguration implements DatabaseConfigurationContract
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-            // Pin the session to UTC here (not only in initStatements): PDO
-            // re-runs INIT_COMMAND on every connect AND auto-reconnect, so
-            // CURRENT_TIMESTAMP/NOW() and TIMESTAMP read-back stay UTC even after
-            // a dropped connection. '+00:00' is a numeric offset (no tz tables).
+            // The WHOLE session setup, in ONE statement, here rather than in
+            // initStatements(): PDO runs INIT_COMMAND on every connect AND every
+            // auto-reconnect, so a dropped connection comes back UTC and strict
+            // too (initStatements() only run on the first connect). One round
+            // trip per connection instead of three — every request that touches
+            // the database opens one.
+            //
+            //   NAMES     the connection charset (also in the DSN; kept so
+            //             character_set_results follows it on every server)
+            //   time_zone '+00:00' — CURRENT_TIMESTAMP/NOW() and TIMESTAMP
+            //             read-back are UTC; a numeric offset needs no tz tables
+            //   sql_mode  strict, so silent truncation/coercion never reaches
+            //             production
             //
             // The driver-specific constants live on \Pdo\Mysql (PHP 8.4+), NOT on
             // PDO: the PDO::MYSQL_* aliases are deprecated as of 8.5 and emit a
             // notice on every connection. Written fully qualified because an
             // unqualified `Pdo\Mysql` would resolve inside THIS namespace, and
             // `use Pdo\Mysql;` would leave a bare `Mysql::` at the call site.
-            \Pdo\Mysql::ATTR_INIT_COMMAND => "SET NAMES {$this->charset}, time_zone = '+00:00'",
+            \Pdo\Mysql::ATTR_INIT_COMMAND => self::sessionSetup($this->charset),
         ];
 
         if ($this->sslCa && $this->useSslVerify) {
@@ -78,15 +87,17 @@ final readonly class MySQLConfiguration implements DatabaseConfigurationContract
 
     public function initStatements(): array
     {
-        // Charset is already applied via \Pdo\Mysql::ATTR_INIT_COMMAND; strict mode is
-        // enforced here so silent truncation/coercion never reaches production.
-        // The session timezone is pinned to UTC ('+00:00' is a numeric offset, so
-        // it needs no timezone tables): CURRENT_TIMESTAMP / NOW() and TIMESTAMP
-        // read-back are then unambiguously UTC, matching the PHP-side UTC clock.
-        return [
-            "SET SESSION sql_mode = 'STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION'",
-            "SET time_zone = '+00:00'",
-        ];
+        // Nothing: charset, UTC and strict mode are all set by the single
+        // INIT_COMMAND in pdoOptions(). Statements here would cost a round
+        // trip each on every connection.
+        return [];
+    }
+
+    /** The one statement every connection starts with. */
+    public static function sessionSetup(string $charset = 'utf8mb4'): string
+    {
+        return "SET NAMES {$charset}, time_zone = '+00:00', "
+            . "SESSION sql_mode = 'STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION'";
     }
 
     public function toArray(): array

@@ -111,7 +111,7 @@ Each driver returns `initStatements()` run immediately after connecting:
 | Driver | Statements | Why |
 |---|---|---|
 | SQLite | `PRAGMA foreign_keys = ON`, `busy_timeout = 5000`, `journal_mode = WAL`* | FK enforcement is **off by default** in SQLite |
-| MySQL | `SET SESSION sql_mode = 'STRICT_ALL_TABLES,…'` | fail on truncation/coercion instead of silent corruption |
+| MySQL | — (all in ONE `INIT_COMMAND`: `SET NAMES …, time_zone = '+00:00', SESSION sql_mode = 'STRICT_ALL_TABLES,…'`) | strict mode stops silent truncation/coercion; UTC session; one round trip per connection, re-applied by PDO on every auto-reconnect |
 | SQL Server | `SET XACT_ABORT ON` | whole-transaction rollback on any runtime error |
 | PostgreSQL | — | strict + FK-enforcing by default |
 
