@@ -33,6 +33,9 @@ final class MultiDriverDatabaseAdapter implements DatabasePort
 {
     private ?PDO $pdo = null;
 
+    /** Resolved lazily from the configuration's PDO options. */
+    private ?bool $emulate = null;
+
     /** Current transaction nesting depth (0 = no active transaction). */
     private int $transactionLevel = 0;
 
@@ -286,6 +289,45 @@ final class MultiDriverDatabaseAdapter implements DatabasePort
         return $params;
     }
 
+    /**
+     * Run a prepared statement.
+     *
+     * Native prepares (the default) keep `execute($params)`: every value is sent
+     * as a string and the SERVER coerces it, which is why `LIMIT ?` works.
+     *
+     * With emulated prepares (DB_EMULATE_PREPARES, MySQL/MariaDB) the CLIENT
+     * renders the value into the SQL, so a string becomes `LIMIT '10'`, which
+     * MySQL rejects. Values are therefore bound by PHP type: int -> PARAM_INT,
+     * null -> PARAM_NULL, everything else -> PARAM_STR (bool is already 1/0 by
+     * normaliseBindings()).
+     *
+     * @param array<array-key, mixed> $params
+     */
+    private function executeStatement(PDOStatement $stmt, array $params): void
+    {
+        if (!$this->emulatesPrepares()) {
+            $stmt->execute($params);
+            return;
+        }
+
+        foreach ($params as $key => $value) {
+            $type = match (true) {
+                is_int($value)  => PDO::PARAM_INT,
+                $value === null => PDO::PARAM_NULL,
+                default         => PDO::PARAM_STR,
+            };
+            // Positional keys are 0-based; PDO's are 1-based.
+            $stmt->bindValue(is_int($key) ? $key + 1 : $key, $value, $type);
+        }
+
+        $stmt->execute();
+    }
+
+    private function emulatesPrepares(): bool
+    {
+        return $this->emulate ??= ($this->config->pdoOptions()[PDO::ATTR_EMULATE_PREPARES] ?? false) === true;
+    }
+
     private function run(string $operation, string $sql, array $params, callable $reader): mixed
     {
         $startedAt = microtime(true);
@@ -293,7 +335,7 @@ final class MultiDriverDatabaseAdapter implements DatabasePort
 
         try {
             $stmt = $this->pdo()->prepare($sql);
-            $stmt->execute($params);
+            $this->executeStatement($stmt, $params);
             $result = $reader($stmt);
             $this->logQuery($sql, $params, $startedAt);
 
@@ -305,7 +347,7 @@ final class MultiDriverDatabaseAdapter implements DatabasePort
 
                 try {
                     $stmt = $this->pdo()->prepare($sql);
-                    $stmt->execute($params);
+                    $this->executeStatement($stmt, $params);
                     $result = $reader($stmt);
                     $this->logQuery($sql, $params, $startedAt);
 

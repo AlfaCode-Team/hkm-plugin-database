@@ -63,6 +63,13 @@ final class MySQLConfigurationTest extends TestCase
         $this->assertFalse($options[PDO::ATTR_EMULATE_PREPARES]);
     }
 
+    public function test_emulated_prepares_are_opt_in(): void
+    {
+        $this->assertFalse((new MySQLConfiguration())->pdoOptions()[PDO::ATTR_EMULATE_PREPARES]);
+        $this->assertTrue((new MySQLConfiguration(emulatePrepares: true))->pdoOptions()[PDO::ATTR_EMULATE_PREPARES]);
+        $this->assertStringContainsString('charset=utf8mb4', (new MySQLConfiguration(emulatePrepares: true))->dsn());
+    }
+
     public function test_ssl_options_only_present_when_verify_enabled(): void
     {
         $without = (new MySQLConfiguration(sslCa: '/ca.pem', useSslVerify: false))->pdoOptions();

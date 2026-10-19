@@ -143,7 +143,38 @@ Set `DB_ENABLE_QUERY_LOG=true` to turn on debug logging through the Provider.
 | `DB_SSL_VERIFY` / `DB_SSL_CA` | mysql | off |
 | `DB_UNIX_SOCKET` | mysql, pgsql | — |
 | `DB_ENCRYPT` / `DB_TRUST_SERVER_CERT` | sqlsrv | off |
+| `DB_EMULATE_PREPARES` | mysql / mariadb | off |
 | `DB_ENABLE_QUERY_LOG` | observability | off |
+
+### `DB_EMULATE_PREPARES` (opt-in, MySQL/MariaDB)
+
+Default (`false`): native server-side prepares. Each query is three round
+trips (Prepare, Execute, Close stmt). `true` makes PDO interpolate the values
+client-side and send one statement: one round trip per query.
+
+With it on, the adapter binds by PHP type (`int` -> `PARAM_INT`, `null` ->
+`PARAM_NULL`, everything else `PARAM_STR`; `bool` is already sent as 1/0).
+Without that, `LIMIT :n` would render `LIMIT '10'`, which MySQL rejects. With it
+off nothing changes: `execute($params)` as before.
+
+Trade-offs:
+
+- The charset must be in the DSN for client-side escaping to be injection-safe;
+  `MySQLConfiguration::dsn()` always includes `charset=`. Keep `DB_CHARSET` a
+  real charset (default `utf8mb4`).
+- Result types are unchanged: PHP 8.1+ with mysqlnd returns native int/float
+  either way; `ATTR_STRINGIFY_FETCHES` stays false.
+- A named placeholder may then appear twice in one statement (native prepares
+  reject that). Code written that way will not run with the flag off.
+- Syntax errors and bad types surface when the statement runs, not at prepare;
+  error messages can differ slightly.
+- Floats are bound as strings (`'1.5'`), as they were before; do not rely on
+  float-to-int coercion in `LIMIT`.
+- Anything that passes a numeric string to `LIMIT`/`OFFSET` fails with the flag
+  on; cast it to `int` first.
+
+Test the application's own queries (paging, `IN (...)` lists, JSON columns,
+boolean columns, binary values) on a staging database before enabling.
 
 Every variable is declared in `module.json` `config[]` — an undeclared variable
 read by the module fails boot (GDA rule).

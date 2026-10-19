@@ -23,6 +23,7 @@ final readonly class MySQLConfiguration implements DatabaseConfigurationContract
         private bool $useSslVerify = false,
         private ?string $sslCa = null,
         private ?string $unixSocket = null,
+        private bool $emulatePrepares = false,
     ) {}
 
     public function driver(): string
@@ -54,7 +55,12 @@ final readonly class MySQLConfiguration implements DatabaseConfigurationContract
         $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
+            // OPT-IN (DB_EMULATE_PREPARES). false = native server-side prepares: three
+            // round trips per query (prepare, execute, close). true = the client
+            // interpolates the values and sends ONE statement. The adapter then
+            // binds by PHP type (see MultiDriverDatabaseAdapter::bindTyped()).
+            // The charset is already in dsn(), which emulation's quoting relies on.
+            PDO::ATTR_EMULATE_PREPARES => $this->emulatePrepares,
             // The WHOLE session setup, in ONE statement, here rather than in
             // initStatements(): PDO runs INIT_COMMAND on every connect AND every
             // auto-reconnect, so a dropped connection comes back UTC and strict
@@ -110,6 +116,7 @@ final readonly class MySQLConfiguration implements DatabaseConfigurationContract
             'username' => $this->username,
             'charset' => $this->charset,
             'unix_socket' => $this->unixSocket,
+            'emulate_prepares' => $this->emulatePrepares,
         ];
     }
 }

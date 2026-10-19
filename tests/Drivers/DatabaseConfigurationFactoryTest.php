@@ -105,4 +105,14 @@ final class DatabaseConfigurationFactoryTest extends TestCase
             putenv('DB_DATABASE');
         }
     }
+
+    public function test_emulate_prepares_reaches_mysql_only_and_defaults_off(): void
+    {
+        $off = $this->factory->make(['driver' => 'mysql']);
+        $on = $this->factory->make(['driver' => 'mariadb', 'emulate_prepares' => 'true']);
+
+        $this->assertFalse($off->pdoOptions()[\PDO::ATTR_EMULATE_PREPARES]);
+        $this->assertTrue($on->pdoOptions()[\PDO::ATTR_EMULATE_PREPARES]);
+        $this->assertFalse($this->factory->make(['driver' => 'pgsql', 'emulate_prepares' => '1'])->pdoOptions()[\PDO::ATTR_EMULATE_PREPARES]);
+    }
 }

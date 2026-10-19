@@ -1,6 +1,6 @@
 {
   "name": "database",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "kernel": "^1.19.0",
   "solves": "database.management",
   "type": "module",
@@ -25,6 +25,7 @@
     { "key": "DB_SSL_VERIFY", "type": "bool", "required": false },
     { "key": "DB_SSL_CA", "type": "string", "required": false },
     { "key": "DB_UNIX_SOCKET", "type": "string", "required": false },
+    { "key": "DB_EMULATE_PREPARES", "type": "bool", "required": false },
     { "key": "DB_ENCRYPT", "type": "bool", "required": false },
     { "key": "DB_TRUST_SERVER_CERT", "type": "bool", "required": false },
     { "key": "DB_ENABLE_QUERY_LOG", "type": "bool", "required": false },

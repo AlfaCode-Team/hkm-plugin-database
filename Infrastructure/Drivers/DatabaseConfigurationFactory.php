@@ -38,7 +38,7 @@ final class DatabaseConfigurationFactory
      *
      * Recognised keys: driver, host, port, database, username, password,
      * charset, ssl_mode, ssl_verify, ssl_ca, unix_socket, trust_server_certificate,
-     * encrypt.
+     * encrypt, emulate_prepares (mysql/mariadb only).
      *
      * @param array<string, mixed> $settings
      * @throws ConnectionException when the driver is unknown
@@ -81,6 +81,7 @@ final class DatabaseConfigurationFactory
             'unix_socket' => $env('DB_UNIX_SOCKET'),
             'trust_server_certificate' => $env('DB_TRUST_SERVER_CERT'),
             'encrypt' => $env('DB_ENCRYPT'),
+            'emulate_prepares' => $env('DB_EMULATE_PREPARES'),
         ]);
     }
 
@@ -96,6 +97,7 @@ final class DatabaseConfigurationFactory
             useSslVerify: $this->bool($s['ssl_verify'] ?? false),
             sslCa: $this->nullableString($s['ssl_ca'] ?? null),
             unixSocket: $this->nullableString($s['unix_socket'] ?? null),
+            emulatePrepares: $this->bool($s['emulate_prepares'] ?? false),
         );
     }
 
